@@ -25,7 +25,11 @@ Pull docker image:
 
 `docker pull docker.io/satelligence/litmus-test`
 
-NOTE for unix users: if you do not have permissions to connect to the docker daemon, add yourself to the docker group: `sudo usermod -a -G docker $USER`
+NOTE for unix users: if you do not have permissions to connect to the docker daemon, add yourself to the docker group: 
+
+`sudo usermod -a -G docker $USER`
+
+You might have to log out and back in again!
 
 Run docker with a binding of the current workdir at `/app`:
 
