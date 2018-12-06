@@ -40,7 +40,7 @@ Download the sample data from within the docker, using wget:
 ```bash
 mkdir data
 cd data
-wget https://storage.googleapis.com/s11-litmus-test/Peninsular_Malaysia_{2016..2017}_{1..2}_Landsat8.tif
+wget https://storage.googleapis.com/s11-litmustest/Peninsular_Malaysia_{2016..2017}_{1..2}_Landsat8.tif
 ```
 
 ### The input Data
@@ -48,7 +48,7 @@ The data you just downloaded are 4 Landsat-8 half year image composites, coverin
 
 2016_1 rgb image looks like this:
 
-![pm_2016_1_rgb](https://storage.googleapis.com/s11-litmus-test/Screenshot%20from%202018-02-01%2014-00-16.png)
+![pm_2016_1_rgb](https://storage.googleapis.com/s11-litmustest/Screenshot%20from%202018-02-01%2014-00-16.png)
 
 The landsat bands are particularly suited for detecting vegetation characteristics. A forest for the human eye is mostly green and no forest is often brownish or grey. For landsat a more effective measure of forest is the relative reflectance in the shortwave infrared compared to near infrared. Using Landsat's `1.5 * swir / nir` will give high values for bare areas and low values for forested areas.
 
