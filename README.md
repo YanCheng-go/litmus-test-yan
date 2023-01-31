@@ -69,6 +69,6 @@ When you open the script in an editor you will also see some extra comments.
 ### The deforestation detector
 Your task is to use the numpy arrays you can now create to identify **which** pixels in the sample data got deforested and **when** this has happened. The approach for doing this we leave up to you. We encourage you to be creative in your solution, but we are most interested in the implementation, contrary to the solution itself (use the swir/nir ratio mentioned above!). Besides testing your learning ability or proficiency with the libraries, we will look at readability, maintainability and scalability of your implementation. A unit test will be greatly appreciated. Feel free to take litmus-test.py as a starting point or create your own python script.
 
-We ask you to spend around 6 hours on your implementation and the remaining 2 on describing the choices you made and what you would do next to make your work better. Please submit your work in a merge (pull) request on https://gitlab.com/satelligence/litmus-test before saturday 2300 hours.
+We ask you to spend around 6 hours on your implementation and the remaining 2 on describing the choices you made and what you would do next to make your work better. Please submit your work in a merge (pull) request.
 
 Best of luck!
