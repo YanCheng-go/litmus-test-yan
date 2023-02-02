@@ -1,4 +1,4 @@
-FROM registry.gitlab.com/satelligence/dprof/dprof-img-process:2.3.0-4-g8fc1c86
+FROM osgeo/gdal:ubuntu-small-3.6.1
 
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV GDAL_DISABLE_READDIR_ON_OPEN=TRUE
