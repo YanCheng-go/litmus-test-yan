@@ -18,7 +18,8 @@ BANDS = {
     9: 'thermal2'
 }
 
-def read_tif(image_file):
+
+def read_tif(image_file: str) -> np.ndarray:
     """
     Opens an image file and returns a multidimensional numpy array
 
