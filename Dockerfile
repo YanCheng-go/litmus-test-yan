@@ -1,4 +1,4 @@
-FROM osgeo/gdal:ubuntu-small-3.6.1
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.6.4
 
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV GDAL_DISABLE_READDIR_ON_OPEN=TRUE
