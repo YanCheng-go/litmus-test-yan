@@ -46,7 +46,7 @@ Windows cmd: `docker run -v %cd%:/app/ -t -i litmustest /bin/bash`
 ### The input Data
 You can retrieve the input data from within the docker container or inside your own terminal using wget. wget comes 
 preinstalled in the docker image, but if you are developing locally you can either install wget yourself or get all 
-4 images by yourself using the url in the code section below. The url starts with `https://storage..`
+3 images by yourself using the url in the code section below. The url starts with `https://storage..`
 
 ```bash
 mkdir data
@@ -54,7 +54,7 @@ cd data
 wget https://storage.googleapis.com/s11-litmustest/Peninsular_Malaysia_{2016..2017}_{1..2}_Landsat8.tif
 ```
 
-The data you just downloaded are 4 Landsat-8 half year image composites, covering a small area on the Malaysia Peninsular. 
+The data you just downloaded are 3 Landsat-8 half year image composites, covering a small area on the Malaysia Peninsular. 
 Landsat-8 is the eighth NASA satellite of the landsat series. It measures reflectance in the so called optical part of 
 the electromagnetic spectrum. Besides the familiar blue, green and red, it measures near infrared, shortwave infrared 
 and thermal infrared.
