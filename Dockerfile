@@ -1,4 +1,4 @@
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.6.4
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.11.3
 
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV GDAL_DISABLE_READDIR_ON_OPEN=TRUE
@@ -14,13 +14,11 @@ RUN apt-get update && apt-get install -y \
   python3-pip \
   wget
 
-RUN pip3 install --upgrade pip
-
 # Set the working directory to /app
 WORKDIR /app
 
 # Copy the application's requirements.txt and run pip to install all
 # dependencies. Remove build artifact.
 ADD requirements.txt /app/requirements.txt
-RUN pip3 install -r /app/requirements.txt
+RUN pip3 install -r /app/requirements.txt --break-system-packages
 RUN rm /app/requirements.txt
