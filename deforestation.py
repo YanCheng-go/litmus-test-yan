@@ -1,14 +1,51 @@
 """Simple deforestation detection using NDVI thresholding.
 
+# TODO: Move to README.md and add a setup.py for pip install
+# -----------------------------------------------------------------------------
+# Overview
+# -----------------------------------------------------------------------------
 - Load one or more satellite images (GeoTIFF format).
 - Compute index = 1.5 * swir / nir (high = bare, low = forest).
 - Thresholds per image to produce forest masks.
+- Create cloud/water masks if requested.
 - Detects first time a pixel transitions from forest to non-forest (with persistence).
+- Post-processes the deforestation mask to remove small isolated areas.
+- Saves deforestation mask and time of deforestation.
 - Outputs:
     - deforestation_mask.tif (unit8: 1 deforested, 0 otherwise)
     - deforestation_time.tif (int32: yyyyi half (1/2) encoded as 20161; 0=none)
     - forest_mask_<stamp>.tif for debugging when --dump-forest-masks is used
+    - Logs to logs/deforestation.log if run from command line
 
+# -----------------------------------------------------------------------------
+# Requirements
+# -----------------------------------------------------------------------------
+- Python 3.7+
+- numpy
+- rasterio
+- scipy
+
+# -----------------------------------------------------------------------------
+# Command line arguments
+# ------------------------------------------------------------------------------
+- --inputs: list of input GeoTIFF files (supports glob patterns)
+- --nir-band: 1-based band index for NIR (default: 5 for Landsat 8)
+- --swir-band: 1-based band index for SWIR (default: 6 for Landsat 8)
+- --blue-band: 1-based band index for Blue (default: 2 for Landsat 8)
+- --green-band: 1-based band index for Green (default: 3 for Landsat 8)
+- --red-band: 1-based band index for Red (default: 4 for Landsat 8)
+- --outdir: output directory (default: outputs)
+- --persistence: number of consecutive non-forest detections to confirm deforestation (default: 0)
+- --dump-forest-masks: if set, dumps forest masks per time step
+- --percentile-thr: fallback percentile threshold (0-100) if Otsu fails (default: 50)
+- --require-nonforest-until-end: only mark deforestation if pixel stays non-forest until the last image
+- --use-water-mask: mask water per time step
+- --use-cloud-mask: mask clouds/shadows per time step
+- --index: choice of index ("swir_nir" or "nir_minus_red", default: "swir_nir")
+
+# -----------------------------------------------------------------------------
+# Example usage
+# -----------------------------------------------------------------------------
 Usage example (from project root, after downloading data):
     python deforestation.py \
         --inputs data/Peninsular_Malaysia_*.tif \
@@ -31,17 +68,18 @@ import numpy as np
 import rasterio
 from utils import setup_logger
 
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+
 logger = setup_logger(logs_dir="./logs", name="deforestation")
 
-# TODO: non data in the last time step was classified as non-forest...
+# -----------------------------------------------------------------------------
+# Constants & utilities
+# -----------------------------------------------------------------------------
 
 EPS = 1e-6
-
-FILENAME_TIME_RE = re.compile(
-    r"(?:^|[/\\])[^/\\]*_(\d{4})_(\d)[^/\\]*\.(?:tif|tiff)$",
-    re.IGNORECASE
-)
-
+FILENAME_TIME_RE = re.compile(r"(?:^|[/\\])[^/\\]*_(\d{4})_(\d)[^/\\]*\.(?:tif|tiff)$",re.IGNORECASE)
 BANDS = {
     1: 'coastal',
     2: 'blue',
@@ -53,6 +91,10 @@ BANDS = {
     8: 'thermal1',
     9: 'thermal2'
 }
+
+# -----------------------------------------------------------------------------
+# Argument parsing
+# -----------------------------------------------------------------------------
 
 # TODO: use a dictionary to specify band indices per sensor (Landsat, Sentinel-2, etc.)
 def parse_args():
@@ -72,6 +114,10 @@ def parse_args():
     ap.add_argument("--use-cloud-mask", action="store_true", help="Mask clouds/shadows per time step.")
     ap.add_argument("--index", choices=["swir_nir", "nir_minus_red"], default="swir_nir", help="Index choice. Default: swir_nir (1.5*SWIR/NIR).")
     return ap.parse_args()
+
+# -----------------------------------------------------------------------------
+# I/O helpers
+# -----------------------------------------------------------------------------
 
 def discover_inputs(patterns: List[str]) -> List[str]:
     """Expand input patterns, sort by (year, half) if possible.
@@ -145,6 +191,33 @@ def read_bands_align(paths: List[str], nir_idx: int, swir_idx: int, blue_idx: in
             swir_list.append(swir)
     return nir_list, swir_list, blue_list, green_list, red_list, profile
 
+# TODO: smooth out noise
+def write_geotiff(path: str, profile: dict, array: np.ndarray):
+    """Write single-band GeoTIFF with given profile and array.
+    Arguments:
+        path: output file path
+        profile: rasterio profile dict
+        array: 2D array to write
+    Notes:
+        - profile is updated to match array dtype and count=1.
+        - Creates parent directories if needed.
+    """
+    prof = profile.copy()
+    # dtype & nodata by array type
+    if array.dtype == np.uint8:
+        prof.update(dtype="uint8", nodata=0, count=1)
+    elif array.dtype == np.int32:
+        prof.update(dtype="int32", nodata=0, count=1)
+    else:
+        prof.update(dtype=str(array.dtype), count=1)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with rasterio.open(path, "w", **prof) as dst:
+        dst.write(array, 1)
+
+# -----------------------------------------------------------------------------
+# Indices
+# -----------------------------------------------------------------------------
+
 def swir_nir_index(swir: np.ndarray, nir: np.ndarray) -> np.ndarray:
     """Compute 1.5 * SWIR / NIR safely. 0/0 = NaN; x/0 = inf; -x/0 = -inf
     Arguments:
@@ -188,6 +261,10 @@ def compute_index(nir: np.ndarray, red: np.ndarray, swir: np.ndarray, kind: str 
         return nir_minus_red_index(nir, red)
     else:
         raise ValueError(f"Unknown index: {kind}")
+
+# -----------------------------------------------------------------------------
+# Thresholding & classification
+# -----------------------------------------------------------------------------
 
 def otsu_threshold(x: np.ndarray, valid_mask: Optional[np.ndarray] = None) -> Optional[float]:
     """Simple Otsu on finite values; returns None if not enough valid data.
@@ -237,6 +314,10 @@ def classify_forest(index_img: np.ndarray, valid_mask: Optional[np.ndarray], fal
         thr = np.percentile(vals, fallback_percentile)
     forest = (index_img < thr) & finite_valid
     return forest
+
+# -----------------------------------------------------------------------------
+# Mask builders
+# -----------------------------------------------------------------------------
 
 # TODO: Better water/cloud masking
 def build_water_mask(nir: np.ndarray, swir: np.ndarray) -> np.ndarray:
@@ -303,6 +384,10 @@ def build_valid_masks(nir_list, swir_list, blue_list, green_list, red_list,
         bad = w | c | sh
         valids.append(finite & (~bad))
     return valids
+
+# -----------------------------------------------------------------------------
+# Change detection
+# -----------------------------------------------------------------------------
 
 # TODO: verify
 def forward_fill_bounded_bool(state: np.ndarray, mask: np.ndarray, max_gap: int = 99) -> Tuple[np.ndarray, np.ndarray]:
@@ -416,7 +501,11 @@ def write_geotiff(path: str, profile: dict, array: np.ndarray):
     with rasterio.open(path, "w", **prof) as dst:
         dst.write(array, 1)
 
+# -----------------------------------------------------------------------------
+# Pipeline
+# -----------------------------------------------------------------------------
 def main():
+    # parse arguments
     args = parse_args()
     paths = discover_inputs(args.inputs)
     if len(paths) < 2:
@@ -434,6 +523,7 @@ def main():
             years.append(2000)
             halves.append(len(halves) + 1)
 
+    # read bands
     nir_list, swir_list, blue_list, green_list, red_list, profile = read_bands_align(
         paths,
         nir_idx=args.nir_band,
@@ -443,11 +533,13 @@ def main():
         red_idx=args.red_band
     )
 
+    # build valid masks
     valid_list = build_valid_masks(
         nir_list, swir_list, blue_list, green_list, red_list,
         use_water=args.use_water_mask, use_clouds=args.use_cloud_mask
     )
 
+    # compute index and classify forest per time step
     forest_masks = []
     for i, (nir, swir, red, valid) in enumerate(zip(nir_list, swir_list, red_list, valid_list)):
         idx = compute_index(nir, red, swir, kind=args.index)
