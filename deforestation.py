@@ -304,6 +304,39 @@ def build_valid_masks(nir_list, swir_list, blue_list, green_list, red_list,
         valids.append(finite & (~bad))
     return valids
 
+# TODO: verify
+def forward_fill_bounded_bool(state: np.ndarray, mask: np.ndarray, max_gap: int = 99) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Carry the classification of the previous time step for invalid pixels
+    Arguments:
+        state: forest/nonforest classification
+        mask: valid mask
+        max_gap: maximum number of consecutive invalid values
+    Returns:
+      filled_state: forward-filled forest/non-forest across invalids up to max_gap
+      filled_mask : positions that were imputed (invalid but filled)
+    """
+    T, H, W = state.shape
+    filled_state = state.copy()
+    filled_mask = np.zeros_like(state, dtype=bool)
+
+    gap = np.zeros((H, W), dtype=np.int16)          # length of current invalid run since last valid
+    have_prev = mask[0].copy()                      # we've seen a valid obs before this t
+
+    for t in range(1, T):
+        # update gap length
+        gap = np.where(mask[t], 0, np.where(have_prev, gap + 1, gap))
+        # carry forward where invalid, we have a previous valid, and gap <= max_gap
+        carry = (~mask[t]) & have_prev & (gap <= max_gap)
+        if carry.any():
+            filled_state[t][carry] = filled_state[t-1][carry]
+            filled_mask[t][carry] = True
+        # we've now seen valid wherever this slice is valid
+        have_prev = have_prev | mask[t]
+
+    return filled_state, filled_mask
+
+# TODO: produce uncertainty map / closest time / number of gap years prior to confirmation
 def detect_deforestation(forest_stack: np.ndarray, years: List[int], halves: List[int], persistence: int = 1, valid_stack: Optional[np.ndarray] = None, require_nonforest_until_end: bool = False,) -> Tuple[np.ndarray, np.ndarray]:
     """
     Detect first time of deforestation (forest -> non-forest) with optional persistence.
@@ -328,9 +361,12 @@ def detect_deforestation(forest_stack: np.ndarray, years: List[int], halves: Lis
     if valid_stack is None:
         valid_stack = np.ones_like(forest_stack, dtype=bool)
 
+    forest_stack, _ = forward_fill_bounded_bool(forest_stack, valid_stack)
+    # valid_stack = filled_mask.copy()  # use this wherever you require validity
+
     for t in range(1, T):
         # must be valid at t-1 and t
-        base = (forest_stack[t-1] == True) & (forest_stack[t] == False) & valid_stack[t-1] & valid_stack[t]
+        base = (forest_stack[t-1] == True) & (forest_stack[t] == False) #& valid_stack[t-1] & valid_stack[t]
         if not base.any():
             continue
 
