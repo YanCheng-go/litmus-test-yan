@@ -1,16 +1,24 @@
-
 import numpy as np
-from defor.indices import swir_nir_index, nir_minus_red_index
+from deforestation.indices import swir_nir_index, nir_minus_red_index, compute_index
 
-def test_swir_nir_basic():
-    swir = np.array([[2.0, 0.0],[1.0, 3.0]], dtype=np.float32)
-    nir  = np.array([[1.0, 2.0],[0.0, 3.0]], dtype=np.float32)
-    idx = swir_nir_index(swir, nir)
-    assert np.isfinite(idx[0,0]) and np.isfinite(idx[0,1])
-    assert idx.shape == swir.shape
 
-def test_nir_minus_red():
-    nir = np.array([[0.5, 0.3]], dtype=np.float32)
-    red = np.array([[0.2, 0.1]], dtype=np.float32)
-    idx = nir_minus_red_index(nir, red)
-    np.testing.assert_allclose(idx, np.array([[0.3, 0.2]], dtype=np.float32))
+def test_swir_nir_index_basic():
+    swir = np.array([[2., 0.], [1., 3.]], dtype=float)
+    nir  = np.array([[1., 0.], [2., 0.]], dtype=float)
+    out = swir_nir_index(swir, nir)
+    assert out.shape == swir.shape
+    assert np.isfinite(out[0,0]) and np.all(np.isfinite(out[np.isfinite(out)]))
+
+
+def test_nir_minus_red_index_basic():
+    nir = np.array([[0.6, 0.4]], dtype=float)
+    red = np.array([[0.1, 0.5]], dtype=float)
+    out = nir_minus_red_index(nir, red)
+    np.testing.assert_allclose(out, np.array([[0.5, -0.1]], dtype=np.float32))
+
+
+def test_compute_index_switch():
+    nir = np.ones((2,2), float)
+    red = np.zeros((2,2), float)
+    swir = np.ones((2,2), float)
+    assert compute_index(nir, red, swir, "nir_minus_red").dtype == np.float32

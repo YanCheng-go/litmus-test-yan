@@ -1,37 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "defor"
+name = "deforestation"
 version = "0.1.0"
-description = "Simple deforestation detection (SWIR/NIR or NIR-RED) with a clean, testable design."
+description = "Simple deforestation detection using spectral thresholds (SWIR/NIR or NIR-Red)"
 readme = "README.md"
-requires-python = ">=3.9"
-authors = [{ name="Yan Cheng", email="chengyan2017@gmail.com" }]
+authors = [{name = "Your Name"}]
+requires-python = ">=3.8"
 dependencies = [
-    "numpy>=1.22",
-    "rasterio>=1.4.0",
-    "typer>=0.9.0",
+  "numpy",
+  "rasterio",
+  "scipy",
 ]
 
 [project.scripts]
-defor = "defor.cli:entrypoint"
+deforest = "deforestation.cli:main"
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+addopts = "-q"
+pythonpath = ["src"]
 
-[tool.ruff]
-line-length = 100
-target-version = "py39"
-
-[tool.mypy]
-python_version = "3.9"
-ignore_missing_imports = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-warn_unused_configs = true
-
-# 👇 flat layout: only include the 'defor' package
 [tool.setuptools.packages.find]
-include = ["defor*"]
+where = ["src"]
+include = ["deforestation*"]
 exclude = [
   "data*", "logs*", "tmp*", "outputs*", "outputs_70*", "outputs_20*",
   "deforestation*",  # exclude any stray folder/module named like this

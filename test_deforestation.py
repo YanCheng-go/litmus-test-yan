@@ -11,6 +11,8 @@ from rasterio.transform import from_origin
 
 SCRIPT = Path(__file__).parent / "deforestation.py"
 
+# TODO: test gap filling
+# TODO: test post-processing
 def _write_scene(path: Path, swir: np.ndarray, nir: np.ndarray, red: np.ndarray,
                  blue: np.ndarray, green: np.ndarray):
     """Write a 6-band GeoTIFF matching the band indices expected by the script:
