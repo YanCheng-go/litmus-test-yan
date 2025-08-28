@@ -113,7 +113,7 @@ docker run --rm \
 <p align="center">
   <img src="https://github.com/YanCheng-go/litmus-test-yan/blob/master/docs/assets/deforestation_mask.png" alt="deforestation mask" width="30%"/>
   <img src="https://github.com/YanCheng-go/litmus-test-yan/blob/master/docs/assets/deforestation_time.png" alt="deforestation time" width="30%"/>
-  <img src="https://github.com/YanCheng-go/litmus-test-yan/blob/master/docs/assets/deforestation_uncertainty.png" alt="deforestation uncertainty" width="30%"/>
+  <img src="https://github.com/YanCheng-go/litmus-test-yan/blob/master/docs/assets/deforestation_uncertainty_years.png" alt="deforestation uncertainty" width="30%"/>
 </p>
 
 - left: deforestation mask (1=deforested, 0=otherwise)
