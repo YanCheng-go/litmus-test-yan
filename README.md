@@ -23,6 +23,13 @@ Simple deforestation detection using swir/nir thresholding.
 pip install -e .
 ```
 
+## Download data
+```bash
+mkdir data
+cd data
+wget https://storage.googleapis.com/s11-litmustest/Peninsular_Malaysia_{2016..2017}_{1..2}_Landsat8.tif
+```
+
 ## Test
 ```bash
 pytest tests
