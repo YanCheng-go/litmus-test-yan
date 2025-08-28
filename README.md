@@ -1,6 +1,21 @@
 # deforestation
 
-Simple deforestation detection using NDVI-like thresholding.
+Simple deforestation detection using swir/nir thresholding.
+
+## Overvew
+- Load one or more satellite images (GeoTIFF format).
+- Compute index = 1.5 * swir / nir (high = bare, low = forest).
+- Thresholds per image to produce forest masks.
+- Create cloud/water masks if requested.
+- Detects first time a pixel transitions from forest to non-forest (with persistence).
+- Post-processes the deforestation mask to remove small isolated areas (TO BE ADDED).
+- Saves deforestation mask, time of deforestation, and gaps years (uncertainty layer).
+- Outputs:
+    - deforestation_mask.tif (unit8: 1 deforested, 0 otherwise)
+    - deforestation_time.tif (int32: yyyyi half (1/2) encoded as 20161; 0=none)
+    - deforestation_uncertainty_years.tif (float32: years of invalid-gap uncertainty)
+    - forest_mask_<stamp>.tif for debugging when --dump-forest-masks is used
+    - Logs to logs/deforestation.log if run from command line
 
 ## Install
 
@@ -25,6 +40,25 @@ deforest \
   --dump-forest-masks \
   --percentile-thr 50
 ```
+
+Command line arguments:
+
+| Argument                        | Type                  | Default      | Description                                                                                  |
+| ------------------------------- | --------------------- | ------------ | -------------------------------------------------------------------------------------------- |
+| `--inputs`                      | list (glob supported) | **required** | Input satellite images (GeoTIFF format). Supports glob patterns like `data/*.tif`.           |
+| `--nir-band`                    | int                   | 5            | 1-based band index for NIR (e.g., Landsat 8 Band 5).                                         |
+| `--swir-band`                   | int                   | 6            | 1-based band index for SWIR (e.g., Landsat 8 Band 6).                                        |
+| `--blue-band`                   | int                   | 2            | 1-based band index for Blue (e.g., Landsat 8 Band 2).                                        |
+| `--green-band`                  | int                   | 3            | 1-based band index for Green (e.g., Landsat 8 Band 3).                                       |
+| `--red-band`                    | int                   | 4            | 1-based band index for Red (e.g., Landsat 8 Band 4).                                         |
+| `--outdir`                      | str                   | `outputs`    | Output directory where results will be saved.                                                |
+| `--persistence`                 | int                   | 0            | Number of consecutive non-forest detections required to confirm deforestation.               |
+| `--dump-forest-masks`           | flag                  | off          | If set, dumps per-timestep forest masks to files.                                            |
+| `--percentile-thr`              | float                 | 50.0         | Fallback percentile threshold (0–100) if Otsu’s method fails.                                |
+| `--require-nonforest-until-end` | flag                  | off          | Only mark deforestation if a pixel remains non-forest until the final image.                 |
+| `--use-water-mask`              | flag                  | off          | Apply water masking at each timestep.                                                        |
+| `--use-cloud-mask`              | flag                  | off          | Apply cloud/shadow masking at each timestep.                                                 |
+| `--index`                       | choice                | `swir_nir`   | Index formula to use. Options: `swir_nir` (1.5 × SWIR / NIR) or `nir_minus_red` (NIR − Red). |
 
 Outputs:
 - `outputs/deforestation_mask.tif` (`uint8`: 1 deforested, 0 otherwise)
