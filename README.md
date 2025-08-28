@@ -2,7 +2,7 @@
 
 Simple deforestation detection using swir/nir thresholding.
 
-## Overvew
+## Overview
 - Load one or more satellite images (GeoTIFF format).
 - Compute index = 1.5 * swir / nir (high = bare, low = forest).
 - Thresholds per image to produce forest masks.
@@ -17,10 +17,10 @@ Simple deforestation detection using swir/nir thresholding.
     - forest_mask_<stamp>.tif for debugging when --dump-forest-masks is used
     - Logs to logs/deforestation.log if run from command line
 
-## Install
+## Install package
 
 ```bash
-pip install -e .
+pip install .
 ```
 
 ## Download data
@@ -32,6 +32,7 @@ wget https://storage.googleapis.com/s11-litmustest/Peninsular_Malaysia_{2016..20
 
 ## Test
 ```bash
+pip install -e .[dev]
 pytest tests
 ```
 
@@ -107,7 +108,7 @@ docker run --rm \
 - **PyPI** publish runs on tags like `v0.1.0` if `PYPI_API_TOKEN` is set in repo secrets.
 
 ## TODOS
-- [ ] Post-processing to remove small deforested patches and fill small holes
+- [ ] Post-processing to remove small deforested patches and fill small holes, and remove non-forested areas using state-of-art land cover maps
 - [ ] Add more robust cloud/water/shadow masking
 - [ ] Scalability improvements
   - [ ] Parallel processing

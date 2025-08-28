@@ -12,10 +12,17 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy",
     "rasterio",
-    "ipdb",
     "scipy",
-    "typer",
+    "typer"
 ]
+
+# Optional dependencies for development
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ipdb",
+    "matplotlib",
+    ]
 
 [project.scripts]
 deforest = "deforestation.cli:main"

@@ -16,7 +16,7 @@ test:
   services: []
   before_script:
     - python -m pip install --upgrade pip
-    - pip install -e .[dev] pytest pytest-cov
+    - pip install -e .[dev]
   script:
     - pytest --cov=src/deforestation --cov-fail-under=80
   coverage: '/^TOTAL.*\s+(\d+\%)$/'
