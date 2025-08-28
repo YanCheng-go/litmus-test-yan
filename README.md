@@ -109,6 +109,17 @@ docker run --rm \
   --percentile-thr 50
 ```
 
+## Example output
+<p align="center">
+  <img src="https://github.com/YanCheng-go/litmus-test-yan/blob/master/docs/assets/deforestation_mask.png" alt="deforestation mask" width="30%"/>
+  <img src="https://github.com/YanCheng-go/litmus-test-yan/blob/master/docs/assets/deforestation_time.png" alt="deforestation time" width="30%"/>
+  <img src="https://github.com/YanCheng-go/litmus-test-yan/blob/master/docs/assets/deforestation_uncertainty.png" alt="deforestation uncertainty" width="30%"/>
+</p>
+
+- left: deforestation mask (1=deforested, 0=otherwise)
+- middle: deforestation time (yyyyi half encoded as 20161)
+- right: deforestation uncertainty (years of invalid-gap uncertainty)
+
 ## GitHub Actions
 
 - **CI** runs tests on pushes/PRs to `main`/`master`.
