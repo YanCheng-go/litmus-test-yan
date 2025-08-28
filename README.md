@@ -2,8 +2,8 @@
 
 Simple deforestation detection using swir/nir thresholding.
 
-# Add badges showing the success of CI, Docker, and PyPI publish
 [![Test & Docker](https://github.com/YanCheng-go/litmus-test-yan/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/YanCheng-go/litmus-test-yan/actions/workflows/ci-cd.yml)
+
 ## Overview
 - Load one or more satellite images (GeoTIFF format).
 - Compute index = 1.5 * swir / nir (high = bare, low = forest).
