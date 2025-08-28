@@ -64,3 +64,14 @@ docker run --rm \
 - **CI** runs tests on pushes/PRs to `main`/`master`.
 - **Docker** images are pushed to GHCR when you push to `main` or tag (prefix `v`).
 - **PyPI** publish runs on tags like `v0.1.0` if `PYPI_API_TOKEN` is set in repo secrets.
+
+## TODOS
+- [ ] Post-processing to remove small deforested patches and fill small holes
+- [ ] Add more robust cloud/water/shadow masking
+- [ ] Scalability improvements
+  - [ ] Parallel processing
+  - [ ] Tiling for large images
+- [ ] Edge cases
+  - [ ] Handle missing timesteps
+  - [ ] Handle different CRS/resolutions
+- [ ] Test different indices or machine learning approaches
