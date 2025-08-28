@@ -26,9 +26,10 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["deforestation*"]
+#include = ["deforestation*"]
 exclude = ["data*", "logs*", "tmp*", "outputs*"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
 pythonpath = ["src"]
+testpaths = ["tests"]
