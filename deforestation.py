@@ -79,7 +79,7 @@ logger = setup_logger(logs_dir="./logs", name="deforestation")
 # -----------------------------------------------------------------------------
 
 EPS = 1e-6
-FILENAME_TIME_RE = re.compile(r"(?:^|[/\\])[^/\\]*_(\d{4})_(\d)[^/\\]*\.(?:tif|tiff)$",re.IGNORECASE)
+FILENAME_TIME_RE = re.compile(r'_(\d{4})[_-]([12])(?=[^.]*\.(?:tif|tiff)$)', re.IGNORECASE)
 BANDS = {
     1: 'coastal',
     2: 'blue',
@@ -514,7 +514,7 @@ def main():
     # parse time ordering
     years, halves = [], []
     for p in paths:
-        m = FILENAME_TIME_RE.match(os.path.basename(p))
+        m = FILENAME_TIME_RE.search(os.path.basename(p))
         if m:
             years.append(int(m.group(1)))
             halves.append(int(m.group(2)))
