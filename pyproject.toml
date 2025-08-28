@@ -7,12 +7,14 @@ name = "deforestation"
 version = "0.1.0"
 description = "Simple deforestation detection using spectral thresholds (SWIR/NIR or NIR-Red)"
 readme = "README.md"
-authors = [{name = "Your Name"}]
-requires-python = ">=3.8"
+authors = [{name = "Yan Cheng", email = "chengyan2017@gmail.com"}]
+requires-python = ">=3.9"
 dependencies = [
-  "numpy",
-  "rasterio",
-  "ipdb", "scipy", "typer"
+    "numpy",
+    "rasterio",
+    "ipdb",
+    "scipy",
+    "typer",
 ]
 
 [project.scripts]
