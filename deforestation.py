@@ -67,6 +67,7 @@ from typing import List, Tuple, Optional
 import numpy as np
 import rasterio
 from utils import setup_logger
+# import cv2
 
 # -----------------------------------------------------------------------------
 # Logging
@@ -191,7 +192,6 @@ def read_bands_align(paths: List[str], nir_idx: int, swir_idx: int, blue_idx: in
             swir_list.append(swir)
     return nir_list, swir_list, blue_list, green_list, red_list, profile
 
-# TODO: smooth out noise
 def write_geotiff(path: str, profile: dict, array: np.ndarray):
     """Write single-band GeoTIFF with given profile and array.
     Arguments:
@@ -652,6 +652,12 @@ def main():
         require_nonforest_until_end=args.require_nonforest_until_end
     )
 
+    # # post-process deforestation mask
+    # defo_mask = smooth_deforestation_mask_cv(defo_mask, min_area=4, connectivity=8)
+    # defo_time = defo_time * defo_mask  # remove time where mask is zero
+
+    # save outputs
+    os.makedirs(args.outdir, exist_ok=True)
     write_geotiff(os.path.join(args.outdir, "deforestation_mask.tif"), profile, defo_mask)
     write_geotiff(os.path.join(args.outdir, "deforestation_time.tif"), profile, defo_time)
     write_geotiff(os.path.join(args.outdir, "deforestation_uncertainty_years.tif"), profile, uncertainty_gap_years.astype("float32"))
