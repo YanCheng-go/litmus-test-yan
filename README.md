@@ -53,3 +53,9 @@ docker run --rm \
   --persistence 0 \
   --percentile-thr 50
 ```
+
+## GitHub Actions
+
+- **CI** runs tests on pushes/PRs to `main`/`master`.
+- **Docker** images are pushed to GHCR when you push to `main` or tag (prefix `v`).
+- **PyPI** publish runs on tags like `v0.1.0` if `PYPI_API_TOKEN` is set in repo secrets.
