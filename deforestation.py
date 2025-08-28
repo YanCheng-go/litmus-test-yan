@@ -421,85 +421,167 @@ def forward_fill_bounded_bool(state: np.ndarray, mask: np.ndarray, max_gap: int 
 
     return filled_state, filled_mask
 
-# TODO: produce uncertainty map / closest time / number of gap years prior to confirmation
-def detect_deforestation(forest_stack: np.ndarray, years: List[int], halves: List[int], persistence: int = 1, valid_stack: Optional[np.ndarray] = None, require_nonforest_until_end: bool = False,) -> Tuple[np.ndarray, np.ndarray]:
+def detect_deforestation(
+    forest_stack: np.ndarray,
+    years: List[int],
+    halves: List[int],
+    persistence: int = 0,
+    valid_stack: Optional[np.ndarray] = None,
+    require_nonforest_until_end: bool = False,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Detect first time of deforestation (forest -> non-forest) with optional persistence.
-    Arguments:
-        forest_stack: [T,H,W] boolean array (True=forest)
-        years: list of years per time step
-        halves: list of halves (1/2) per time step
-        persistence: number of consecutive non-forest steps to confirm deforestation
-        valid_stack: [T,H,W] boolean array (True=valid data)
-        require_nonforest_until_end: if True, deforestation is confirmed only if the pixel remains non-forest until the last time step
+    Detect first time of deforestation (forest -> non-forest) with optional persistence,
+    and produce an "uncertainty" map: the YEARS of invalid data between the last valid
+    forest and the first valid non-forest that precedes the confirmed event.
+
+    Args:
+        forest_stack: [T,H,W] boolean (True=forest)
+        years: list[int] of length T
+        halves: list[int] of length T (1 or 2)
+        persistence: consecutive non-forest steps (and valid) required to confirm
+        valid_stack: [T,H,W] boolean (True=valid data). If None, all valid.
+        require_nonforest_until_end: if True, must remain non-forest & valid until last step
+
     Returns:
         defo_mask: [H,W] uint8 (1=deforested, 0=otherwise)
-        defo_time: [H,W] int32 (yyyyi half encoded as 20161; 0=none)
-    Notes:
-        - If exclude is given, those pixels are never marked as deforested.
-        - If a pixel is forest in the last time step, it is never marked as deforested.
+        defo_time: [H,W] int32 (year*10 + half; 0 if none)
+        uncertainty_gap_years: [H,W] float32
+            (sum of invalid YEARS between last valid forest and the first valid non-forest
+             that precedes the confirmed deforestation; 0 if none or not confirmed)
     """
     T, H, W = forest_stack.shape
-    defo_mask = np.zeros((H, W), dtype=np.uint8)
-    defo_time = np.zeros((H, W), dtype=np.int32)
+    years = np.asarray(years, dtype=np.int32)
+    halves = np.asarray(halves, dtype=np.int32)
 
     if valid_stack is None:
         valid_stack = np.ones_like(forest_stack, dtype=bool)
 
-    forest_stack, _ = forward_fill_bounded_bool(forest_stack, valid_stack)
-    # valid_stack = filled_mask.copy()  # use this wherever you require validity
+    # Keep original states for "closest" detection across invalid gaps
+    orig_forest = forest_stack.copy()
+
+    # Build per-step duration in YEARS, supporting irregular/missing halves
+    dt_years = np.zeros(T, dtype=np.float32)
+    if T > 1:
+        dy = years[1:] - years[:-1]
+        dh = halves[1:] - halves[:-1]
+        dt_years[1:] = dy + 0.5 * dh  # e.g., 2016H2 -> 2017H1 = 0.5 years
+
+    # 1) Confirm deforestation using forward-filled series (your original semantics)
+    forest_ff, _ = forward_fill_bounded_bool(forest_stack, valid_stack)
+
+    defo_mask = np.zeros((H, W), dtype=np.uint8)
+    defo_time = np.zeros((H, W), dtype=np.int32)
+    confirm_idx = -np.ones((H, W), dtype=np.int32)
 
     for t in range(1, T):
-        # must be valid at t-1 and t
-        base = (forest_stack[t-1] == True) & (forest_stack[t] == False) #& valid_stack[t-1] & valid_stack[t]
+        base = (forest_ff[t-1] == True) & (forest_ff[t] == False)
         if not base.any():
             continue
 
-        # persistence over the following steps
         persists = np.ones_like(base, dtype=bool)
         for k in range(1, persistence + 1):
             if t + k >= T:
-                persists &= False  # cannot confirm persistence beyond series
+                persists &= False
             else:
-                persists &= (forest_stack[t + k] == False) & valid_stack[t + k]
+                persists &= (forest_ff[t + k] == False) & valid_stack[t + k]
 
         cand = base & persists
 
         if require_nonforest_until_end:
-            stay_clear = np.ones_like(base, dtype=bool)
-            for k in range(t, T):
-                stay_clear &= (forest_stack[k] == False) & valid_stack[k]
-            cand &= stay_clear
+            tail_ok = np.all((forest_ff[t:] == False) & valid_stack[t:], axis=0)
+            cand &= tail_ok
 
-        newly_set = cand & (defo_mask == 0)
-        if newly_set.any():
-            defo_mask[newly_set] = 1
-            stamp = years[t] * 10 + halves[t]
-            defo_time[newly_set] = stamp
+        newly = cand & (defo_mask == 0)
+        if newly.any():
+            defo_mask[newly] = 1
+            defo_time[newly] = (years[t] * 10 + halves[t]).astype(np.int32)
+            confirm_idx[newly] = t
 
-    return defo_mask, defo_time
+    # 2) Find the "closest" valid non-forest that is preceded by ≥1 invalid step(s)
+    #    after the last valid forest, and store that previous valid index too.
+    closest_idx = -np.ones((H, W), dtype=np.int32)
+    prev_valid_idx_at_closest = -np.ones((H, W), dtype=np.int32)
 
-def write_geotiff(path: str, profile: dict, array: np.ndarray):
-    """Write single-band GeoTIFF with given profile and array.
-    Arguments:
-        path: output file path
-        profile: rasterio profile dict
-        array: 2D array to write
-    Notes:
-        - profile is updated to match array dtype and count=1.
-        - Creates parent directories if needed.
-    """
-    prof = profile.copy()
-    # dtype & nodata by array type
-    if array.dtype == np.uint8:
-        prof.update(dtype="uint8", nodata=0, count=1)
-    elif array.dtype == np.int32:
-        prof.update(dtype="int32", nodata=0, count=1)
-    else:
-        prof.update(dtype=str(array.dtype), count=1)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with rasterio.open(path, "w", **prof) as dst:
-        dst.write(array, 1)
+    last_valid_idx = -np.ones((H, W), dtype=np.int32)
+    last_valid_state = np.zeros((H, W), dtype=bool)
+
+    for t in range(T):
+        # Evaluate current step BEFORE updating "last_valid_*"
+        curr_valid = valid_stack[t]
+        curr_nf = curr_valid & (orig_forest[t] == False)
+
+        # Need a last valid step, it must have been forest, and there must be at least one INVALID between
+        ok = (
+            (closest_idx < 0) &
+            curr_nf &
+            (last_valid_idx >= 0) &
+            (last_valid_state == True) &
+            (last_valid_idx < (t - 1))
+        )
+
+        if ok.any():
+            closest_idx[ok] = t
+            prev_valid_idx_at_closest[ok] = last_valid_idx[ok]
+
+        # Now update trackers for next iteration
+        if curr_valid.any():
+            last_valid_idx = np.where(curr_valid, t, last_valid_idx)
+            last_valid_state = np.where(curr_valid, orig_forest[t], last_valid_state)
+
+    # 3) Uncertainty = sum of invalid YEARS in (prev_valid_idx, closest_idx]
+    #    but only for pixels that are actually confirmed (and where closest_idx exists and precedes confirmation).
+    uncertainty_gap_years = np.zeros((H, W), dtype=np.float32)
+
+    # cumulative sum of invalid dt along time, per-pixel
+    inv_dt = (~valid_stack).astype(np.float32) * dt_years.reshape(T, 1, 1)  # [T,H,W]
+    inv_cs = inv_dt.cumsum(axis=0)  # [T,H,W]
+
+    good = (
+        (confirm_idx >= 0) &
+        (closest_idx >= 0) &
+        (prev_valid_idx_at_closest >= 0) &
+        (closest_idx <= confirm_idx)
+    )
+    if good.any():
+        # gather per-pixel cumulative sums at indices
+        idx_c = closest_idx.reshape(1, H, W)
+        idx_p = prev_valid_idx_at_closest.reshape(1, H, W)
+
+        cs_c = np.take_along_axis(inv_cs, idx_c, axis=0)[0]
+        cs_p = np.take_along_axis(inv_cs, idx_p, axis=0)[0]
+
+        gap = cs_c - cs_p  # years of invalid data strictly between prev_valid and closest (inclusive of the step gap)
+        gap = np.maximum(gap, 0.0)
+
+        uncertainty_gap_years[good] = gap[good].astype(np.float32)
+
+    return defo_mask, defo_time, uncertainty_gap_years
+
+# -----------------------------------------------------------------------------
+# Post-processing
+# -----------------------------------------------------------------------------
+# TODO: more post processing options?
+# def smooth_deforestation_mask_cv(defo_mask: np.ndarray, min_area: int = 4, connectivity: int = 8) -> np.ndarray:
+#     """Remove small isolated areas from deforestation mask using OpenCV connected components.
+#     Arguments:
+#         defo_mask: 2D uint8 array (1=deforested, 0=otherwise)
+#         min_area: minimum area (in pixels) to keep a connected component
+#         connectivity: 4 or 8 for pixel connectivity
+#     Returns:
+#         cleaned defo_mask: 2D uint8 array
+#     """
+#     m = (defo_mask != 0).astype(np.uint8)
+#     num, labels, stats, _ = cv2.connectedComponentsWithStats(m, connectivity)
+#     if num <= 1:
+#         return np.zeros_like(defo_mask, dtype=np.uint8)
+#
+#     # stats rows: 0..num-1 (row 0 is background); CC_STAT_AREA gives pixel count
+#     keep_by_label = np.zeros(num, dtype=bool)
+#     keep_by_label[1:] = stats[1:, cv2.CC_STAT_AREA] >= min_area
+#
+#     cleaned = keep_by_label[labels]
+#     return cleaned.astype(np.uint8)
+
 
 # -----------------------------------------------------------------------------
 # Pipeline
@@ -560,8 +642,11 @@ def main():
     forest_stack = np.stack(forest_masks, axis=0).astype(bool)
     valid_stack = np.stack(valid_list, axis=0).astype(bool)
 
-    defo_mask, defo_time = detect_deforestation(
-        forest_stack, years, halves,
+    # detect deforestation
+    defo_mask, defo_time, uncertainty_gap_years = detect_deforestation(
+        forest_stack,
+        years,
+        halves,
         persistence=args.persistence,
         valid_stack=valid_stack,
         require_nonforest_until_end=args.require_nonforest_until_end
@@ -569,6 +654,7 @@ def main():
 
     write_geotiff(os.path.join(args.outdir, "deforestation_mask.tif"), profile, defo_mask)
     write_geotiff(os.path.join(args.outdir, "deforestation_time.tif"), profile, defo_time)
+    write_geotiff(os.path.join(args.outdir, "deforestation_uncertainty_years.tif"), profile, uncertainty_gap_years.astype("float32"))
 
     # quick stats
     changed = int(defo_mask.sum())
