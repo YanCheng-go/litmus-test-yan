@@ -12,7 +12,7 @@ requires-python = ">=3.8"
 dependencies = [
   "numpy",
   "rasterio",
-  "scipy",
+  "ipdb", "scipy", "typer"
 ]
 
 [project.scripts]

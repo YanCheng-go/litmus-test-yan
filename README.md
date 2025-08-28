@@ -8,6 +8,11 @@ Simple deforestation detection using NDVI-like thresholding.
 pip install -e .
 ```
 
+## Test
+```bash
+pytest tests
+```
+
 ## Usage
 
 ```bash
