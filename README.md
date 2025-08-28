@@ -17,6 +17,12 @@ Simple deforestation detection using swir/nir thresholding.
     - forest_mask_<stamp>.tif for debugging when --dump-forest-masks is used
     - Logs to logs/deforestation.log if run from command line
 
+## Requirements
+- Python 3.9+
+- Packages: numpy, rasterio, scikit-image, click, tqdm, matplotlib
+- Optional: Docker
+- Tested on Linux and MacOS (Windows untested)
+
 ## Install package
 
 ```bash
