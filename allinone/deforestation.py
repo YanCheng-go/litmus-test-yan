@@ -73,7 +73,7 @@ from utils import setup_logger
 # Logging
 # -----------------------------------------------------------------------------
 
-logger = setup_logger(logs_dir="./logs", name="deforestation")
+logger = setup_logger(logs_dir="../logs", name="deforestation")
 
 # -----------------------------------------------------------------------------
 # Constants & utilities

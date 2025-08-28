@@ -18,14 +18,15 @@ dependencies = [
 [project.scripts]
 deforest = "deforestation.cli:main"
 
-[tool.pytest.ini_options]
-addopts = "-q"
-pythonpath = ["src"]
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["deforestation*"]
-exclude = [
-  "data*", "logs*", "tmp*", "outputs*", "outputs_70*", "outputs_20*",
-  "deforestation*",  # exclude any stray folder/module named like this
-]
+exclude = ["data*", "logs*", "tmp*", "outputs*"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["src"]

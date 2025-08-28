@@ -30,3 +30,26 @@ Outputs:
 Notes:
 - Supports two indices: `swir_nir` (1.5 * SWIR / NIR) and `nir_minus_red` (NIR - Red)
 - Optional crude water/cloud/shadow masking per timestep
+
+## Docker
+
+Build the image:
+
+```bash
+docker build -t deforestation:latest .
+```
+
+Run the CLI (mount data & outputs):
+
+```bash
+docker run --rm \
+  -v $PWD/data:/data \
+  -v $PWD/outputs:/outputs \
+  deforestation:latest \
+  --inputs "/data/Peninsular_Malaysia_*.tif" \
+  --nir-band 5 --swir-band 6 \
+  --blue-band 2 --green-band 3 --red-band 4 \
+  --outdir /outputs \
+  --persistence 0 \
+  --percentile-thr 50
+```

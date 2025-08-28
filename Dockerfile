@@ -17,8 +17,10 @@ RUN apt-get update && apt-get install -y \
 # Set the working directory to /app
 WORKDIR /app
 
-# Copy the application's requirements.txt and run pip to install all
-# dependencies. Remove build artifact.
-ADD requirements.txt /app/requirements.txt
-RUN pip3 install -r /app/requirements.txt --break-system-packages
-RUN rm /app/requirements.txt
+COPY pyproject.toml README.md ./
+COPY src ./src
+
+RUN pip install . --break-system-packages
+
+ENTRYPOINT ["deforest"]
+CMD ["--help"]
