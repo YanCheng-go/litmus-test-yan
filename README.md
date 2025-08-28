@@ -1,4 +1,4 @@
-# deforestation
+# Deforestation Detector
 
 Simple deforestation detection using swir/nir thresholding.
 
